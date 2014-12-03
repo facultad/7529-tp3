@@ -36,21 +36,22 @@ class TP3:
 
     def __init__(self, lines):
         """
-        O(n)
+        O(n*log(n))
+        n: len(lines)
         """
         id = 0
-        self.tareas = ListaOrdenada(permitir_repetidos=True)
-        for line in lines:
-            line = line.strip()
+        self.tareas = ListaOrdenada(permitir_repetidos=True) # O(1)
+        for line in lines: # len(lines)
+            line = line.strip() # O(1)
             if line == "":
                 continue
-            tiempo, beneficio, vencimiento = line.split(',')
+            tiempo, beneficio, vencimiento = line.split(',') # O(1)
             id += 1
             tiempo = int(tiempo)
             beneficio = float(beneficio)
             vencimiento = int(vencimiento)
-            tarea = Tarea(id, tiempo, beneficio, vencimiento)
-            self.tareas.insert(tarea)
+            tarea = Tarea(id, tiempo, beneficio, vencimiento) # O(1)
+            self.tareas.insert(tarea) # O(log(len(self.tareas)))
 
     def indices_tareas(self):
         return range(len(self.tareas))
@@ -94,27 +95,31 @@ class TP3:
 
     def resolver(self):
         """
+        O(W*n)
+        W: Último vencimiento
+        n: Cantidad de tareas
         Obtiene la planificación óptima y su beneficio.
         Devuelve la tupla (planificacion, resto, beneficio)
         """
 
         M = []
-        for t in xrange(0,self.ultimo_vencimiento()+1):
+        # O(W*n)
+        for t in xrange(0,self.ultimo_vencimiento()+1): # W+1
             M.append([])
-            for i in self.indices_tareas():
+            for i in self.indices_tareas(): # n
                 M[t].append(0)
 
-        for t in xrange(1,self.ultimo_vencimiento()+1):
-            for i in self.indices_tareas():
+        for t in xrange(1,self.ultimo_vencimiento()+1): # W+1
+            for i in self.indices_tareas(): # n
                 try:
                     try:
                         M[t][i] = max(M[self.t_inicial(t,i)][self.tarea_anterior(i)]+self.b(i,t),
-                                M[t][self.tarea_anterior(i)])
+                                M[t][self.tarea_anterior(i)]) # O(1)
                     except TiempoInicialNegativo:
-                        M[t][i] = M[t][self.tarea_anterior(i)]
+                        M[t][i] = M[t][self.tarea_anterior(i)] # O(1)
                 except NoExisteTareaAnterior:
                     try:
-                        M[t][i] = max(M[self.t_inicial(t,i)][i], self.b(i,t))
+                        M[t][i] = max(M[self.t_inicial(t,i)][i], self.b(i,t)) #(1)
                     except TiempoInicialNegativo:
                         pass
 
@@ -123,28 +128,42 @@ class TP3:
         planificacion = []
         planificada = [False for i in self.indices_tareas()]
 
+        # O(W+n)
         while t>=0:
             try:
+                # Si en el tiempo t para la tarea i el beneficio es mayor que
+                # el beneficio en el tiempo t de la tarea anterior, entonces la tarea i
+                # está incluida en la planificación.
                 if M[t][i] > M[t][self.tarea_anterior(i)]:
                     planificacion.insert(0,i)
                     planificada[i] = True
                     t=self.t_inicial(t,i)
                     i=self.tarea_anterior(i)
+                # Sino, si en el tiempo t-1 la tarea i tiene mayor beneficio que
+                # en el tiempo t de la tarea anterior, entonces decrementamos t
+                # en una una unidad
                 elif M[t-1][i] > M[t][self.tarea_anterior(i)]:
                     t = t - 1
+                # Sino, significa que la tarea i no está incluida en la planificación
+                # y vamos a la tarea anterior.
                 else:
                     i = self.tarea_anterior(i)
             except NoExisteTareaAnterior:
+                # En caso que no exista tarea anterior, significa que estamos en la primer
+                # tarea, por tanto, en caso que el beneficio sea mayor a 0, entonces indica
+                # que la primer tarea está incluida en la planificación.
                 if M[t][i]>0:
                     planificacion.insert(0,i)
                     planificada[i] = True
                 break
 
         resto = set()
+        # O(n)
         for i in self.indices_tareas():
             if not planificada[i]:
                 resto.add(self.tareas[i].id)
 
+        # O(n)
         return ([self.tareas[i].id for i in planificacion], resto, 
                 M[self.ultimo_vencimiento()][self.ultima_tarea()])
 
